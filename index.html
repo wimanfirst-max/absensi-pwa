@@ -58,7 +58,7 @@ const email = params.get("email") || "unknown@email";
 async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" } },
+      video: { facingMode: "user" },
       audio: false
     });
     video.srcObject = stream;
@@ -67,7 +67,6 @@ async function startCamera() {
     alert("❌ Kamera tidak bisa diakses:\n" + e.message);
   }
 }
-startCamera();
 
 /* =========================
    AMBIL ALAMAT GRATIS
@@ -184,4 +183,5 @@ wrapText(
 
 </body>
 </html>
+
 
