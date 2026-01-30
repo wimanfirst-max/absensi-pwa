@@ -110,10 +110,17 @@ btnFoto.addEventListener("click", () => {
 
     // Logo
     const logo = new Image();
-    logo.src = "logo.png";
-    logo.onload = () => {
-      ctx.drawImage(logo, 10, 10, 80, 80);
-    };
+logo.src = "logo.png";
+logo.onload = () => {
+
+  const maxWidth = 100;   // batas lebar logo
+  const scale = maxWidth / logo.width;
+  const logoWidth = logo.width * scale;
+  const logoHeight = logo.height * scale;
+
+  ctx.drawImage(logo, 10, 10, logoWidth, logoHeight);
+};
+
 
     canvas.style.display = "block";
 
@@ -125,3 +132,4 @@ btnFoto.addEventListener("click", () => {
 
 </body>
 </html>
+
