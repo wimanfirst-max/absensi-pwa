@@ -1,78 +1,112 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Absensi PWA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="manifest" href="manifest.json">
   <style>
-    body { font-family: Arial; text-align: center; padding: 10px; }
-    video, canvas { width: 100%; max-width: 420px; border-radius: 10px; }
-    button { padding: 12px 20px; font-size: 16px; margin-top: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 10px;
+      background: #f4f4f4;
+    }
+    video, canvas {
+      width: 100%;
+      max-width: 420px;
+      border-radius: 10px;
+      background: #000;
+    }
+    button {
+      padding: 14px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #0d6efd;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
 
 <h2>📸 Absensi Foto</h2>
 
-<video id="video" autoplay playsinline></video>
+<video id="video" playsinline></video>
 <br>
-<button onclick="ambilFoto()">Ambil Foto</button>
+<button id="btnFoto">Ambil Foto</button>
 
 <canvas id="canvas" style="display:none;"></canvas>
-<br>
-<a id="download" style="display:none;" download="absensi.jpg">⬇ Download Foto</a>
 
 <script>
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const btnFoto = document.getElementById("btnFoto");
 
 const params = new URLSearchParams(window.location.search);
-const email = params.get("email") || "Tidak diketahui";
+const email = params.get("email") || "unknown@email";
 
-const API_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
+let streamAktif = null;
 
-// Kamera
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-.then(stream => video.srcObject = stream);
+/* =====================
+   START CAMERA (FIX)
+===================== */
+async function startCamera() {
+  try {
+    streamAktif = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" }
+      },
+      audio: false
+    });
 
-// Ambil foto
-function ambilFoto() {
-  navigator.geolocation.getCurrentPosition(async pos => {
+    video.srcObject = streamAktif;
+    video.onloadedmetadata = () => {
+      video.play();
+    };
+
+  } catch (err) {
+    alert("❌ Kamera tidak bisa diakses:\n" + err.message);
+  }
+}
+
+startCamera();
+
+/* =====================
+   AMBIL FOTO
+===================== */
+btnFoto.addEventListener("click", () => {
+
+  if (!video.videoWidth) {
+    alert("⏳ Kamera belum siap, tunggu sebentar");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(pos => {
 
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
 
-    // Reverse geocoding
-    const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`;
-    const geoRes = await fetch(geoUrl);
-    const geoData = await geoRes.json();
-    const alamat = geoData.results[0]?.formatted_address || "Alamat tidak ditemukan";
-
-    // Canvas setup
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
     // Foto utama
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Overlay gelap bawah
+    // Overlay bawah
     ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, canvas.height - 170, canvas.width, 170);
+    ctx.fillRect(0, canvas.height - 140, canvas.width, 140);
 
-    // Text
     ctx.fillStyle = "#fff";
     ctx.font = "16px Arial";
 
-    const now = new Date().toLocaleString("id-ID");
+    const waktu = new Date().toLocaleString("id-ID");
 
-    ctx.fillText(`Nama/Email : ${email}`, 10, canvas.height - 130);
-    ctx.fillText(`Waktu : ${now}`, 10, canvas.height - 105);
-    ctx.fillText(`Lat,Lng : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, canvas.height - 80);
-
-    wrapText(ctx, alamat, 10, canvas.height - 55, canvas.width - 220, 18);
+    ctx.fillText(`Email : ${email}`, 10, canvas.height - 105);
+    ctx.fillText(`Waktu : ${waktu}`, 10, canvas.height - 80);
+    ctx.fillText(`Lokasi : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, canvas.height - 55);
 
     // Logo
     const logo = new Image();
@@ -81,39 +115,12 @@ function ambilFoto() {
       ctx.drawImage(logo, 10, 10, 80, 80);
     };
 
-    // Mini Map
-    const map = new Image();
-    map.src = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=16&size=200x200&markers=color:red|${lat},${lng}&key=${API_KEY}`;
-    map.onload = () => {
-      ctx.drawImage(map, canvas.width - 210, canvas.height - 210, 200, 200);
+    canvas.style.display = "block";
 
-      canvas.style.display = "block";
-      const link = document.getElementById("download");
-      link.href = canvas.toDataURL("image/jpeg", 0.9);
-      link.style.display = "block";
-    };
-
-  }, err => alert("GPS gagal"));
-}
-
-// Text wrap
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(' ');
-  let line = '';
-
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' ';
-    const metrics = ctx.measureText(testLine);
-    if (metrics.width > maxWidth && n > 0) {
-      ctx.fillText(line, x, y);
-      line = words[n] + ' ';
-      y += lineHeight;
-    } else {
-      line = testLine;
-    }
-  }
-  ctx.fillText(line, x, y);
-}
+  }, err => {
+    alert("❌ GPS gagal: " + err.message);
+  });
+});
 </script>
 
 </body>
