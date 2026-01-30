@@ -145,18 +145,19 @@ btnFoto.addEventListener("click", () => {
 
     const waktu = new Date().toLocaleString("id-ID");
 
-    ctx.fillText(`Email : ${email}`, 10, canvas.height - 165);
-    ctx.fillText(`Waktu : ${waktu}`, 10, canvas.height - 140);
-    ctx.fillText(`Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, canvas.height - 115);
+ctx.fillText(`👤 : ${email}`, 10, canvas.height - 165);
+ctx.fillText(`🕒 Waktu : ${waktu}`, 10, canvas.height - 140);
+ctx.fillText(`📍 Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, canvas.height - 115);
 
-    wrapText(
-      ctx,
-      `Alamat : ${alamat}`,
-      10,
-      canvas.height - 90,
-      canvas.width - 20,
-      18
-    );
+wrapText(
+  ctx,
+  `🏢 Alamat : ${alamat}`,
+  10,
+  canvas.height - 90,
+  canvas.width - 20,
+  18
+);
+
 
     // Logo (PROPORSIONAL)
     const logo = new Image();
@@ -183,3 +184,4 @@ btnFoto.addEventListener("click", () => {
 
 </body>
 </html>
+
