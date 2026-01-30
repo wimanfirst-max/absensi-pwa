@@ -36,53 +36,57 @@
 <h2>📸 Absensi Foto</h2>
 
 <video id="video" playsinline></video>
-<button id="btnFoto">Ambil Foto</button>
+
+<button id="btnStart">Aktifkan Kamera</button>
+<button id="btnFoto" style="display:none;">Ambil Foto</button>
 
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-/* =========================
-   INIT
-========================= */
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const btnStart = document.getElementById("btnStart");
 const btnFoto = document.getElementById("btnFoto");
 
 const params = new URLSearchParams(window.location.search);
-const email = params.get("email") || "unknown@email";
+const nama = params.get("nama") || "Nama tidak dikenal";
+
+let streamAktif = null;
 
 /* =========================
-   START CAMERA (STABIL)
+   AKTIFKAN KAMERA DEPAN
 ========================= */
-async function startCamera() {
+btnStart.addEventListener("click", async () => {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
+    streamAktif = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user" },
       audio: false
     });
-    video.srcObject = stream;
+
+    video.srcObject = streamAktif;
     video.onloadedmetadata = () => video.play();
+
+    btnStart.style.display = "none";
+    btnFoto.style.display = "block";
+
   } catch (e) {
     alert("❌ Kamera tidak bisa diakses:\n" + e.message);
   }
-}
+});
 
 /* =========================
-   AMBIL ALAMAT GRATIS
-   (OpenStreetMap)
+   ALAMAT GRATIS
 ========================= */
 async function getAlamatGratis(lat, lng) {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
-    const res = await fetch(url, {
-      headers: { "Accept": "application/json" }
-    });
+    const res = await fetch(url);
     const data = await res.json();
     const a = data.address || {};
 
     return `
-${a.road || ""} ${a.house_number || ""}
+${a.road || ""}
 Kel. ${a.suburb || a.village || ""}
 Kec. ${a.city_district || ""}
 ${a.city || a.town || a.county || ""}
@@ -114,12 +118,12 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 }
 
 /* =========================
-   AMBIL FOTO + OVERLAY
+   AMBIL FOTO
 ========================= */
 btnFoto.addEventListener("click", () => {
 
   if (!video.videoWidth) {
-    alert("⏳ Kamera belum siap, tunggu sebentar");
+    alert("⏳ Kamera belum siap");
     return;
   }
 
@@ -132,10 +136,8 @@ btnFoto.addEventListener("click", () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Foto utama
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0);
 
-    // Overlay bawah
     ctx.fillStyle = "rgba(0,0,0,0.65)";
     ctx.fillRect(0, canvas.height - 200, canvas.width, 200);
 
@@ -144,33 +146,26 @@ btnFoto.addEventListener("click", () => {
 
     const waktu = new Date().toLocaleString("id-ID");
 
-ctx.fillText(`👤 : ${email}`, 10, canvas.height - 165);
-ctx.fillText(`🕒 Waktu : ${waktu}`, 10, canvas.height - 140);
-ctx.fillText(`📍 Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, canvas.height - 115);
+    ctx.fillText(`👤 : ${nama}`, 10, canvas.height - 165);
+    ctx.fillText(`🕒 Waktu : ${waktu}`, 10, canvas.height - 140);
+    ctx.fillText(`📍 Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, canvas.height - 115);
 
-wrapText(
-  ctx,
-  `🏢 Alamat : ${alamat}`,
-  10,
-  canvas.height - 90,
-  canvas.width - 20,
-  18
-);
+    wrapText(
+      ctx,
+      `🏢 Alamat : ${alamat}`,
+      10,
+      canvas.height - 90,
+      canvas.width - 20,
+      18
+    );
 
-
-    // Logo (PROPORSIONAL)
+    // Logo proporsional
     const logo = new Image();
     logo.src = "logo.png";
     logo.onload = () => {
       const maxWidth = 100;
       const scale = maxWidth / logo.width;
-      ctx.drawImage(
-        logo,
-        10,
-        10,
-        logo.width * scale,
-        logo.height * scale
-      );
+      ctx.drawImage(logo, 10, 10, logo.width * scale, logo.height * scale);
     };
 
     canvas.style.display = "block";
@@ -183,5 +178,3 @@ wrapText(
 
 </body>
 </html>
-
-
