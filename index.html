@@ -10,22 +10,24 @@
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 10px;
-      background: #f4f4f4;
+      background: #f2f2f2;
     }
     video, canvas {
       width: 100%;
       max-width: 420px;
-      border-radius: 10px;
+      border-radius: 12px;
       background: #000;
     }
     button {
-      padding: 14px 20px;
+      width: 100%;
+      max-width: 420px;
+      padding: 14px;
       font-size: 16px;
       margin-top: 10px;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       background: #0d6efd;
-      color: #fff;
+      color: white;
     }
   </style>
 </head>
@@ -34,12 +36,14 @@
 <h2>📸 Absensi Foto</h2>
 
 <video id="video" playsinline></video>
-<br>
 <button id="btnFoto">Ambil Foto</button>
 
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
+/* =========================
+   INIT
+========================= */
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -48,35 +52,71 @@ const btnFoto = document.getElementById("btnFoto");
 const params = new URLSearchParams(window.location.search);
 const email = params.get("email") || "unknown@email";
 
-let streamAktif = null;
-
-/* =====================
-   START CAMERA (FIX)
-===================== */
+/* =========================
+   START CAMERA (STABIL)
+========================= */
 async function startCamera() {
   try {
-    streamAktif = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: "environment" }
-      },
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
       audio: false
     });
+    video.srcObject = stream;
+    video.onloadedmetadata = () => video.play();
+  } catch (e) {
+    alert("❌ Kamera tidak bisa diakses:\n" + e.message);
+  }
+}
+startCamera();
 
-    video.srcObject = streamAktif;
-    video.onloadedmetadata = () => {
-      video.play();
-    };
+/* =========================
+   AMBIL ALAMAT GRATIS
+   (OpenStreetMap)
+========================= */
+async function getAlamatGratis(lat, lng) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
+    const res = await fetch(url, {
+      headers: { "Accept": "application/json" }
+    });
+    const data = await res.json();
+    const a = data.address || {};
 
-  } catch (err) {
-    alert("❌ Kamera tidak bisa diakses:\n" + err.message);
+    return `
+${a.road || ""} ${a.house_number || ""}
+Kel. ${a.suburb || a.village || ""}
+Kec. ${a.city_district || ""}
+${a.city || a.town || a.county || ""}
+${a.state || ""}
+`.replace(/\n+/g, "\n").trim();
+
+  } catch {
+    return "Alamat tidak ditemukan";
   }
 }
 
-startCamera();
+/* =========================
+   TEXT WRAP
+========================= */
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  let line = "";
+  for (let i = 0; i < words.length; i++) {
+    const testLine = line + words[i] + " ";
+    if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+      ctx.fillText(line, x, y);
+      line = words[i] + " ";
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, x, y);
+}
 
-/* =====================
-   AMBIL FOTO
-===================== */
+/* =========================
+   AMBIL FOTO + OVERLAY
+========================= */
 btnFoto.addEventListener("click", () => {
 
   if (!video.videoWidth) {
@@ -84,10 +124,11 @@ btnFoto.addEventListener("click", () => {
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(pos => {
+  navigator.geolocation.getCurrentPosition(async pos => {
 
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
+    const alamat = await getAlamatGratis(lat, lng);
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -96,40 +137,49 @@ btnFoto.addEventListener("click", () => {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // Overlay bawah
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, canvas.height - 140, canvas.width, 140);
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(0, canvas.height - 200, canvas.width, 200);
 
     ctx.fillStyle = "#fff";
     ctx.font = "16px Arial";
 
     const waktu = new Date().toLocaleString("id-ID");
 
-    ctx.fillText(`Email : ${email}`, 10, canvas.height - 105);
-    ctx.fillText(`Waktu : ${waktu}`, 10, canvas.height - 80);
-    ctx.fillText(`Lokasi : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, canvas.height - 55);
+    ctx.fillText(`Email : ${email}`, 10, canvas.height - 165);
+    ctx.fillText(`Waktu : ${waktu}`, 10, canvas.height - 140);
+    ctx.fillText(`Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, canvas.height - 115);
 
-    // Logo
+    wrapText(
+      ctx,
+      `Alamat : ${alamat}`,
+      10,
+      canvas.height - 90,
+      canvas.width - 20,
+      18
+    );
+
+    // Logo (PROPORSIONAL)
     const logo = new Image();
-logo.src = "logo.png";
-logo.onload = () => {
-
-  const maxWidth = 100;   // batas lebar logo
-  const scale = maxWidth / logo.width;
-  const logoWidth = logo.width * scale;
-  const logoHeight = logo.height * scale;
-
-  ctx.drawImage(logo, 10, 10, logoWidth, logoHeight);
-};
-
+    logo.src = "logo.png";
+    logo.onload = () => {
+      const maxWidth = 100;
+      const scale = maxWidth / logo.width;
+      ctx.drawImage(
+        logo,
+        10,
+        10,
+        logo.width * scale,
+        logo.height * scale
+      );
+    };
 
     canvas.style.display = "block";
 
   }, err => {
-    alert("❌ GPS gagal: " + err.message);
+    alert("❌ GPS gagal:\n" + err.message);
   });
 });
 </script>
 
 </body>
 </html>
-
