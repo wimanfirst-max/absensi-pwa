@@ -76,12 +76,13 @@ btnStart.addEventListener("click", async () => {
 });
 
 /* =========================
-   ALAMAT GRATIS
+   ALAMAT GRATIS (NO API)
 ========================= */
 async function getAlamatGratis(lat, lng) {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
-    const res = await fetch(url);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+    );
     const data = await res.json();
     const a = data.address || {};
 
@@ -138,65 +139,66 @@ btnFoto.addEventListener("click", () => {
 
     ctx.drawImage(video, 0, 0);
 
+    /* Overlay hitam bawah */
+    const overlayHeight = 200;
+    const overlayTop = canvas.height - overlayHeight;
+
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.fillRect(0, canvas.height - 200, canvas.width, 200);
+    ctx.fillRect(0, overlayTop, canvas.width, overlayHeight);
 
     ctx.fillStyle = "#fff";
     ctx.font = "16px Arial";
 
     const waktu = new Date().toLocaleString("id-ID");
 
-    ctx.fillText(`👤 : ${nama}`, 10, canvas.height - 165);
-    ctx.fillText(`🕒 Waktu : ${waktu}`, 10, canvas.height - 140);
-    ctx.fillText(`📍 Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, canvas.height - 115);
+    ctx.fillText(`👤 Nama : ${nama}`, 10, overlayTop + 35);
+    ctx.fillText(`🕒 Waktu : ${waktu}`, 10, overlayTop + 60);
+    ctx.fillText(`📍 Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, overlayTop + 85);
 
     wrapText(
       ctx,
       `🏢 Alamat : ${alamat}`,
       10,
-      canvas.height - 90,
-      canvas.width - 20,
+      overlayTop + 110,
+      canvas.width - 150,
       18
     );
 
-    // Logo proporsional
+    /* =========================
+       LOGO KIRI ATAS
+    ========================= */
     const logo = new Image();
     logo.src = "logo.png";
     logo.onload = () => {
       const maxWidth = 100;
       const scale = maxWidth / logo.width;
-      ctx.drawImage(logo, 10, 10, logo.width * scale, logo.height * scale);
+      ctx.drawImage(
+        logo,
+        10,
+        10,
+        logo.width * scale,
+        logo.height * scale
+      );
     };
-    
-    // Icon Maps - KANAN BAWAH
-const mapsIcon = new Image();
-mapsIcon.src = "maps.png";
-mapsIcon.onload = () => {
-  const maxWidth = 70; // ukuran icon maps
-  const scale = maxWidth / mapsIcon.width;
 
-  const w = mapsIcon.width * scale;
-  const h = mapsIcon.height * scale;
+    /* =========================
+       MAPS.PNG – KANAN INFO
+    ========================= */
+    const mapsIcon = new Image();
+    mapsIcon.src = "maps.png";
+    mapsIcon.onload = () => {
+      const maxWidth = 120; // LEBIH BESAR
+      const scale = maxWidth / mapsIcon.width;
 
-  // Icon Maps - MENYATU DENGAN INFO (KANAN)
-const mapsIcon = new Image();
-mapsIcon.src = "maps.png";
-mapsIcon.onload = () => {
+      const w = mapsIcon.width * scale;
+      const h = mapsIcon.height * scale;
 
-  const maxWidth = 120; // LEBIH BESAR
-  const scale = maxWidth / mapsIcon.width;
+      const x = canvas.width - w - 15;
+      const y = overlayTop + (overlayHeight / 2) - (h / 2);
 
-  const w = mapsIcon.width * scale;
-  const h = mapsIcon.height * scale;
+      ctx.drawImage(mapsIcon, x, y, w, h);
+    };
 
-  const overlayTop = canvas.height - 200; // awal area info
-  const centerInfo = overlayTop + 80;     // sejajar koordinat
-
-  const x = canvas.width - w - 15;        // kanan info
-  const y = centerInfo - (h / 2);         // rata tengah info
-
-  ctx.drawImage(mapsIcon, x, y, w, h);
-};
     canvas.style.display = "block";
 
   }, err => {
@@ -207,7 +209,3 @@ mapsIcon.onload = () => {
 
 </body>
 </html>
-
-
-
-
