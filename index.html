@@ -178,12 +178,25 @@ mapsIcon.onload = () => {
   const w = mapsIcon.width * scale;
   const h = mapsIcon.height * scale;
 
-  const x = canvas.width - w - 10;   // kanan
-  const y = canvas.height - h - 10;  // bawah
+  // Icon Maps - MENYATU DENGAN INFO (KANAN)
+const mapsIcon = new Image();
+mapsIcon.src = "maps.png";
+mapsIcon.onload = () => {
+
+  const maxWidth = 120; // LEBIH BESAR
+  const scale = maxWidth / mapsIcon.width;
+
+  const w = mapsIcon.width * scale;
+  const h = mapsIcon.height * scale;
+
+  const overlayTop = canvas.height - 200; // awal area info
+  const centerInfo = overlayTop + 80;     // sejajar koordinat
+
+  const x = canvas.width - w - 15;        // kanan info
+  const y = centerInfo - (h / 2);         // rata tengah info
 
   ctx.drawImage(mapsIcon, x, y, w, h);
 };
-
     canvas.style.display = "block";
 
   }, err => {
@@ -194,6 +207,7 @@ mapsIcon.onload = () => {
 
 </body>
 </html>
+
 
 
 
