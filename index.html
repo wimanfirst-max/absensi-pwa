@@ -167,6 +167,22 @@ btnFoto.addEventListener("click", () => {
       const scale = maxWidth / logo.width;
       ctx.drawImage(logo, 10, 10, logo.width * scale, logo.height * scale);
     };
+    
+    // Icon Maps - KANAN BAWAH
+const mapsIcon = new Image();
+mapsIcon.src = "maps.png";
+mapsIcon.onload = () => {
+  const maxWidth = 70; // ukuran icon maps
+  const scale = maxWidth / mapsIcon.width;
+
+  const w = mapsIcon.width * scale;
+  const h = mapsIcon.height * scale;
+
+  const x = canvas.width - w - 10;   // kanan
+  const y = canvas.height - h - 10;  // bawah
+
+  ctx.drawImage(mapsIcon, x, y, w, h);
+};
 
     canvas.style.display = "block";
 
@@ -178,5 +194,6 @@ btnFoto.addEventListener("click", () => {
 
 </body>
 </html>
+
 
 
