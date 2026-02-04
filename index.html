@@ -168,6 +168,15 @@ btnFoto.addEventListener("click", () => {
       ctx.drawImage(logo, 10, 10, logo.width * scale, logo.height * scale);
     };
 
+        // Logo proporsional
+    const logo = new Image();
+    logo.src = "maps.png";
+    logo.onload = () => {
+      const maxWidth = 100;
+      const scale = maxWidth / logo.width;
+      ctx.drawImage(logo, 10, 10, logo.width * scale, logo.height * scale);
+    };
+
     canvas.style.display = "block";
 
   }, err => {
@@ -178,3 +187,4 @@ btnFoto.addEventListener("click", () => {
 
 </body>
 </html>
+
