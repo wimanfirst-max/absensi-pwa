@@ -1,44 +1,44 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Absensi PWA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Absensi PWA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 10px;
-      background: #f2f2f2;
-    }
-    video, canvas {
-      width: 100%;
-      max-width: 420px;
-      border-radius: 12px;
-      background: #000;
-    }
-    button {
-      width: 100%;
-      max-width: 420px;
-      padding: 14px;
-      font-size: 16px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 10px;
-      background: #0d6efd;
-      color: white;
-    }
-  </style>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #eee;
+  text-align: center;
+}
+
+video, canvas {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 14px;
+}
+
+button {
+  width: 100%;
+  max-width: 420px;
+  padding: 14px;
+  font-size: 16px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #0d6efd;
+  color: white;
+}
+</style>
 </head>
+
 <body>
 
-<h2>📸 Absensi Foto</h2>
+<h3>📸 Absensi Foto</h3>
 
-<video id="video" playsinline></video>
-
-<button id="btnStart">Aktifkan Kamera</button>
-<button id="btnFoto" style="display:none;">Ambil Foto</button>
+<video id="video" playsinline autoplay></video>
+<button id="btnFoto">Ambil Foto</button>
 
 <canvas id="canvas" style="display:none;"></canvas>
 
@@ -46,165 +46,123 @@
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const btnStart = document.getElementById("btnStart");
 const btnFoto = document.getElementById("btnFoto");
 
 const params = new URLSearchParams(window.location.search);
-const nama = params.get("nama") || "Nama tidak dikenal";
+const nama = params.get("nama") || "Nama Tidak Dikenal";
 
-let streamAktif = null;
-
-/* =========================
-   AKTIFKAN KAMERA DEPAN
-========================= */
-btnStart.addEventListener("click", async () => {
+/* ===============================
+   AUTO AKTIFKAN KAMERA DEPAN
+================================ */
+(async function startCamera() {
   try {
-    streamAktif = await navigator.mediaDevices.getUserMedia({
+    const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user" },
       audio: false
     });
-
-    video.srcObject = streamAktif;
-    video.onloadedmetadata = () => video.play();
-
-    btnStart.style.display = "none";
-    btnFoto.style.display = "block";
-
+    video.srcObject = stream;
   } catch (e) {
-    alert("❌ Kamera tidak bisa diakses:\n" + e.message);
+    alert("❌ Kamera tidak bisa diakses");
   }
-});
+})();
 
-/* =========================
-   ALAMAT GRATIS (NO API)
-========================= */
-async function getAlamatGratis(lat, lng) {
+/* ===============================
+   AMBIL ALAMAT GRATIS
+================================ */
+async function getAlamat(lat, lng) {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
     );
-    const data = await res.json();
-    const a = data.address || {};
-
-    return `
-${a.road || ""}
-Kel. ${a.suburb || a.village || ""}
+    const d = await res.json();
+    const a = d.address || {};
+    return `${a.road || ""}, ${a.suburb || ""}
 Kec. ${a.city_district || ""}
-${a.city || a.town || a.county || ""}
-${a.state || ""}
-`.replace(/\n+/g, "\n").trim();
-
+${a.city || a.town || ""}
+${a.state || ""}`;
   } catch {
     return "Alamat tidak ditemukan";
   }
 }
 
-/* =========================
-   TEXT WRAP
-========================= */
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+/* ===============================
+   WRAP TEXT
+================================ */
+function wrapText(text, x, y, maxWidth, lineHeight) {
   const words = text.split(" ");
   let line = "";
-  for (let i = 0; i < words.length; i++) {
-    const testLine = line + words[i] + " ";
-    if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + " ";
+    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
       ctx.fillText(line, x, y);
-      line = words[i] + " ";
+      line = words[n] + " ";
       y += lineHeight;
-    } else {
-      line = testLine;
-    }
+    } else line = testLine;
   }
   ctx.fillText(line, x, y);
 }
 
-/* =========================
+/* ===============================
    AMBIL FOTO
-========================= */
-btnFoto.addEventListener("click", () => {
-
-  if (!video.videoWidth) {
-    alert("⏳ Kamera belum siap");
-    return;
-  }
+================================ */
+btnFoto.onclick = () => {
 
   navigator.geolocation.getCurrentPosition(async pos => {
 
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
-    const alamat = await getAlamatGratis(lat, lng);
+    const alamat = await getAlamat(lat, lng);
+    const waktu = new Date().toLocaleString("id-ID");
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
+    // FOTO
     ctx.drawImage(video, 0, 0);
 
-    /* Overlay hitam bawah */
-    const overlayHeight = 200;
-    const overlayTop = canvas.height - overlayHeight;
-
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.fillRect(0, overlayTop, canvas.width, overlayHeight);
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "16px Arial";
-
-    const waktu = new Date().toLocaleString("id-ID");
-
-    ctx.fillText(`👤 Nama : ${nama}`, 10, overlayTop + 35);
-    ctx.fillText(`🕒 Waktu : ${waktu}`, 10, overlayTop + 60);
-    ctx.fillText(`📍 Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 10, overlayTop + 85);
-
-    wrapText(
-      ctx,
-      `🏢 Alamat : ${alamat}`,
-      10,
-      overlayTop + 110,
-      canvas.width - 150,
-      18
-    );
-
-    /* =========================
-       LOGO KIRI ATAS
-    ========================= */
+    // === LOGO KIRI ATAS ===
     const logo = new Image();
     logo.src = "logo.png";
     logo.onload = () => {
-      const maxWidth = 100;
-      const scale = maxWidth / logo.width;
-      ctx.drawImage(
-        logo,
-        10,
-        10,
-        logo.width * scale,
-        logo.height * scale
-      );
+      const w = 90;
+      const h = logo.height * (w / logo.width);
+      ctx.drawImage(logo, 15, 15, w, h);
     };
 
-    /* =========================
-       MAPS.PNG – KANAN INFO
-    ========================= */
-    const mapsIcon = new Image();
-    mapsIcon.src = "maps.png";
-    mapsIcon.onload = () => {
-      const maxWidth = 120; // LEBIH BESAR
-      const scale = maxWidth / mapsIcon.width;
+    // === PANEL BAWAH ===
+    const panelHeight = 200;
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(0, canvas.height - panelHeight, canvas.width, panelHeight);
 
-      const w = mapsIcon.width * scale;
-      const h = mapsIcon.height * scale;
+    ctx.fillStyle = "#fff";
+    ctx.font = "15px Arial";
 
-      const x = canvas.width - w - 15;
-      const y = overlayTop + (overlayHeight / 2) - (h / 2);
+    // === INFO KIRI ===
+    let y = canvas.height - panelHeight + 30;
+    ctx.fillText(`👤 Nama : ${nama}`, 15, y); y += 24;
+    ctx.fillText(`🕒 Waktu : ${waktu}`, 15, y); y += 24;
+    ctx.fillText(`📍 Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 15, y); y += 24;
+    wrapText(`🏢 ${alamat}`, 15, y, canvas.width - 160, 20);
 
-      ctx.drawImage(mapsIcon, x, y, w, h);
+    // === MAPS KANAN BAWAH ===
+    const maps = new Image();
+    maps.src = "maps.png";
+    maps.onload = () => {
+      const w = 120;
+      const h = maps.height * (w / maps.width);
+      ctx.drawImage(
+        maps,
+        canvas.width - w - 15,
+        canvas.height - h - 20,
+        w,
+        h
+      );
     };
 
     canvas.style.display = "block";
 
-  }, err => {
-    alert("❌ GPS gagal:\n" + err.message);
-  });
-});
+  }, err => alert("❌ GPS gagal"));
+};
 </script>
 
 </body>
