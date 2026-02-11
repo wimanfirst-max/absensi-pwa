@@ -52,29 +52,29 @@ const params = new URLSearchParams(window.location.search);
 const nama = params.get("nama") || "Nama Tidak Dikenal";
 
 /* ===============================
-   AUTO AKTIFKAN KAMERA DEPAN
+   AUTO KAMERA DEPAN
 ================================ */
-(async function startCamera() {
+(async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user" },
       audio: false
     });
     video.srcObject = stream;
-  } catch (e) {
+  } catch {
     alert("❌ Kamera tidak bisa diakses");
   }
 })();
 
 /* ===============================
-   AMBIL ALAMAT GRATIS
+   ALAMAT GRATIS
 ================================ */
 async function getAlamat(lat, lng) {
   try {
-    const res = await fetch(
+    const r = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
     );
-    const d = await res.json();
+    const d = await r.json();
     const a = d.address || {};
     return `${a.road || ""}, ${a.suburb || ""}
 Kec. ${a.city_district || ""}
@@ -86,82 +86,91 @@ ${a.state || ""}`;
 }
 
 /* ===============================
-   WRAP TEXT
+   TEXT WRAP
 ================================ */
 function wrapText(text, x, y, maxWidth, lineHeight) {
   const words = text.split(" ");
   let line = "";
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + " ";
-    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+  for (let i = 0; i < words.length; i++) {
+    const test = line + words[i] + " ";
+    if (ctx.measureText(test).width > maxWidth && i > 0) {
       ctx.fillText(line, x, y);
-      line = words[n] + " ";
+      line = words[i] + " ";
       y += lineHeight;
-    } else line = testLine;
+    } else line = test;
   }
   ctx.fillText(line, x, y);
 }
 
 /* ===============================
-   AMBIL FOTO
+   FOTO
 ================================ */
 btnFoto.onclick = () => {
 
-  navigator.geolocation.getCurrentPosition(async pos => {
+navigator.geolocation.getCurrentPosition(async pos => {
 
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-    const alamat = await getAlamat(lat, lng);
-    const waktu = new Date().toLocaleString("id-ID");
+const lat = pos.coords.latitude;
+const lng = pos.coords.longitude;
+const alamat = await getAlamat(lat, lng);
+const waktu = new Date().toLocaleString("id-ID");
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+canvas.width = video.videoWidth;
+canvas.height = video.videoHeight;
 
-    // FOTO
-    ctx.drawImage(video, 0, 0);
+// FOTO
+ctx.drawImage(video, 0, 0);
 
-    // === LOGO KIRI ATAS ===
-    const logo = new Image();
-    logo.src = "logo.png";
-    logo.onload = () => {
-      const w = 90;
-      const h = logo.height * (w / logo.width);
-      ctx.drawImage(logo, 15, 15, w, h);
-    };
+// ===== LOGO (20% LEBIH BESAR) =====
+const logo = new Image();
+logo.src = "logo.png";
+logo.onload = () => {
+  const w = 110; // +20%
+  const h = logo.height * (w / logo.width);
+  ctx.drawImage(logo, 15, 15, w, h);
+};
 
-    // === PANEL BAWAH ===
-    const panelHeight = 200;
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.fillRect(0, canvas.height - panelHeight, canvas.width, panelHeight);
+// ===== HITUNG TINGGI PANEL =====
+ctx.font = "15px Arial";
+const textLines = 6;
+const lineHeight = 22;
+const textHeight = textLines * lineHeight;
 
-    ctx.fillStyle = "#fff";
-    ctx.font = "15px Arial";
+const mapsW = 130;
+const mapsImg = new Image();
+mapsImg.src = "maps.png";
 
-    // === INFO KIRI ===
-    let y = canvas.height - panelHeight + 30;
-    ctx.fillText(`👤 Nama : ${nama}`, 15, y); y += 24;
-    ctx.fillText(`🕒 Waktu : ${waktu}`, 15, y); y += 24;
-    ctx.fillText(`📍 Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 15, y); y += 24;
-    wrapText(`🏢 ${alamat}`, 15, y, canvas.width - 160, 20);
+mapsImg.onload = () => {
 
-    // === MAPS KANAN BAWAH ===
-    const maps = new Image();
-    maps.src = "maps.png";
-    maps.onload = () => {
-      const w = 120;
-      const h = maps.height * (w / maps.width);
-      ctx.drawImage(
-        maps,
-        canvas.width - w - 15,
-        canvas.height - h - 20,
-        w,
-        h
-      );
-    };
+const mapsH = mapsImg.height * (mapsW / mapsImg.width);
+const panelHeight = Math.max(textHeight + 30, mapsH + 30);
 
-    canvas.style.display = "block";
+const panelY = canvas.height - panelHeight;
 
-  }, err => alert("❌ GPS gagal"));
+// ===== PANEL =====
+ctx.fillStyle = "rgba(0,0,0,0.65)";
+ctx.fillRect(0, panelY, canvas.width, panelHeight);
+
+// ===== TEKS KIRI =====
+ctx.fillStyle = "#fff";
+let y = panelY + 30;
+ctx.fillText(`👤 Nama : ${nama}`, 15, y); y += lineHeight;
+ctx.fillText(`🕒 Waktu : ${waktu}`, 15, y); y += lineHeight;
+ctx.fillText(`📍 Koordinat : ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 15, y); y += lineHeight;
+wrapText(`🏢 ${alamat}`, 15, y, canvas.width - mapsW - 40, lineHeight);
+
+// ===== MAPS KANAN =====
+ctx.drawImage(
+  mapsImg,
+  canvas.width - mapsW - 15,
+  panelY + (panelHeight - mapsH) / 2,
+  mapsW,
+  mapsH
+);
+
+canvas.style.display = "block";
+};
+
+}, () => alert("❌ GPS gagal"));
 };
 </script>
 
